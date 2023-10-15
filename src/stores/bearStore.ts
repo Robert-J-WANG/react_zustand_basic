@@ -5,7 +5,6 @@ type TBearStoreState = {
   color: string;
   size: string;
   increasePopulation: () => void;
-  decreasePopulation: () => void;
   removeAllBears: () => void;
   resetBear: () => void;
 };
@@ -20,7 +19,6 @@ export const useBearStore = create<TBearStoreState>()(
         color: "red",
         size: "big",
         increasePopulation: () => set((state) => ({ bears: state.bears + 1 })),
-        decreasePopulation: () => set((state) => ({ bears: state.bears - 1 })),
         removeAllBears: () => set({ bears: 0 }),
         resetBear: () => set({ bears: 0, color: "red", size: "big" }),
       }),
