@@ -1,3 +1,4 @@
+import { shallow } from "zustand/shallow";
 import { useCatStore } from "../stores/catStore";
 
 export const CatController = () => {
@@ -8,8 +9,17 @@ export const CatController = () => {
   // const addBigCats = useCatStore((state) => state.addBigCats);
   // const addSmallCats = useCatStore((state) => state.addSmallCats);
 
-  const addBigCats = useCatStore.use.addBigCats();
-  const addSmallCats = useCatStore.use.addSmallCats();
+  // const addBigCats = useCatStore.use.addBigCats();
+  // const addSmallCats = useCatStore.use.addSmallCats();
+
+  /* ---------------- 那么如何一次获取多个selector呢？ ---------------- */
+  const { addBigCats, addSmallCats } = useCatStore(
+    (state) => ({
+      addBigCats: state.addBigCats,
+      addSmallCats: state.addSmallCats,
+    }),
+    shallow
+  );
 
   return (
     <div className="box">
