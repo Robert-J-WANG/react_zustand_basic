@@ -1,3 +1,6 @@
+body{
+  background-color: #eee;
+}
 .container {
   max-width: 1200px;
   padding: 1rem;
@@ -21,8 +24,7 @@
   flex-grow: 1;
   padding: 1rem;
   border-radius: 0.5rem;
-  border: 1px solid lightgrey;
-  
+  border: 2px solid deepskyblue;
 }
 
 button{  

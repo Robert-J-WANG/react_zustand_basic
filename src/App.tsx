@@ -1,4 +1,5 @@
 import { BearBox } from "./components/BearBox";
+import { CatBox } from "./components/CatBox";
 
 function App() {
   return (
@@ -7,6 +8,9 @@ function App() {
         <h1>Zustand Tutorial</h1>
         <div>
           <BearBox />
+        </div>
+        <div>
+          <CatBox />
         </div>
       </div>
     </>
