@@ -1,3 +1,4 @@
+import React from "react";
 import { BearBox } from "./components/BearBox";
 import { CatBox } from "./components/CatBox";
 import { CatBox2 } from "./components/CatBox2";
