@@ -24,6 +24,7 @@ export const CatBox = () => {
       <h1>CatBox</h1>
       <h2>big cats : {bigCats}</h2>
       <h2>small cats : {smallCats}</h2>
+      <h2>{Math.random()}</h2>
       <div>
         <button onClick={increaseBigCats}>add big cats</button>
         <button onClick={increaseSmallCats}>add small cats</button>

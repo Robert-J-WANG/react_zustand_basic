@@ -123,8 +123,6 @@ export const BearBox = () => {
 
 
 
-++++++
-
 
 
 #### 2. Get( ) 和set( )方法的使用，及使用插件immer的优化
@@ -360,46 +358,377 @@ export const catStore = create<TcatStoreState>()(
 + CatBox组件中使用summary方法
 
 ```tsx
-import { create } from "zustand";
-import { immer } from "zustand/middleware/immer";
+import { catStore } from "../stores/catStore";
 
-type TcatStoreState = {
-  cats: {
-    bigCats: number;
-    smallCats: number;
-  };
-  increaseBigCats: () => void;
-  increaseSmallCats: () => void;
-  // 定义一个summary方法
-  summary: () => void;
+export const CatBox = () => {
+  /* --------------------- 1.返回单个状态元素 --------------------- */
+  /*  
+ const bigCats = catStore((state) => state.cats.bigCats);
+  const smallCats = catStore((state) => state.cats.smallCats);
+  const increaseBigCats = catStore((state) => state.increaseBigCats);
+  const increaseSmallCats = catStore((state) => state.increaseSmallCats);
+  // 新增summary方法
+  const summary = catStore((state) => state.summary); 
+  */
+
+  /* -------------------- 2.批量返回所以状态元素 -------------------- */
+  const {
+    cats: { bigCats, smallCats },
+    increaseBigCats,
+    increaseSmallCats,
+    // 新增summary方法
+    summary,
+  } = catStore();
+  return (
+    <div className="box">
+      <h1>CatBox</h1>
+      <h2>big cats : {bigCats}</h2>
+      <h2>small cats : {smallCats}</h2>
+      <div>
+        <button onClick={increaseBigCats}>add big cats</button>
+        <button onClick={increaseSmallCats}>add small cats</button>
+        {/* 使用summary方法 */}
+        <button onClick={summary}>summary</button>
+      </div>
+    </div>
+  );
 };
 
-export const catStore = create<TcatStoreState>()(
-  immer((set, get) => ({
-    cats: {
-      bigCats: 0,
-      smallCats: 0,
-    },
-    increaseBigCats: () =>
-      set((state) => {
-        state.cats.bigCats++;
-      }),
-    increaseSmallCats: () =>
-      set((state) => {
-        state.cats.smallCats++;
-      }),
-    /* ------------------- 使用get()访问state ------------------- */
-    summary: () => {
-      const totalCats = get().cats.smallCats + get().cats.bigCats;
-      alert("total cats is " + totalCats);
-    },
-  }))
-);
 ```
 
 
 
+3. #### 使用selector和自动selector简化代码
 
+为什么要使用selector？
+
++ 存在的问题：
+    + 上面CatBox组件中使用catStore钩子获取状态元素的时，如果一次性批量返回所以状态元素，但是只使用其中的部分元素时，会引发页面不必要 重渲染问题；
+    + 如果分批获取单个状态元素时，要一遍一遍重写书写，太麻烦
++ 解决方案：使用selector( 就是CatBox组件中返回单个状态元素 的方式，selector是一个回调函数：(state) => state.cats.smallCats )
+
+如何验证页面重绘的问题？
+
++ 创建新的组件 components -> CatBox2.tsx,  并添加到APP组件中
+
+```tsx
+
+export const CatBox2 = () => {
+  return (
+    <div className="box">
+      <h1>CatBox2</h1>
+      <h2>big cats : </h2>
+    </div>
+  );
+};
+
+```
+
+```tsx
+import { BearBox } from "./components/BearBox";
+import { CatBox } from "./components/CatBox";
+import { CatBox2 } from "./components/CatBox2";
+
+function App() {
+  return (
+    <div className="container">
+      <h1>Zustand Tutorial</h1>
+      <div>
+        <BearBox />
+      </div>
+      <div>
+        <CatBox />
+        <CatBox2 />
+      </div>
+    </div>
+  );
+}
+export default App;
+```
+
++ CatBox2组件中调用catStore钩子，获取state ( 一次性批量返回所以状态元素的方式，但只使用smallCats元素), 并使用
+
+```tsx
+import { catStore } from "../stores/catStore";
+
+export const CatBox2 = () => {
+  const { cats: { smallCats }} = catStore();
+  return (
+    <div className="box">
+      <h1>CatBox2</h1>
+      <h2>big cats :{smallCats} </h2>
+    </div>
+  );
+};
+```
+
++ CatBox2中添加随机数验证页面重绘：
+
+```tsx
+import { catStore } from "../stores/catStore";
+
+export const CatBox2 = () => {
+  const { cats: { smallCats }} = catStore();
+  return (
+    <div className="box">
+      <h1>CatBox2</h1>
+      <h2>big cats :{smallCats} </h2>
+      <h2>{Math.random()}</h2>
+    </div>
+  );
+};
+```
+
++ CatBox组件中也添加随机数
+
+```tsx
+import { catStore } from "../stores/catStore";
+
+export const CatBox = () => {
+  /* --------------------- 1.返回单个状态元素 --------------------- */
+  /*  
+ const bigCats = catStore((state) => state.cats.bigCats);
+  const smallCats = catStore((state) => state.cats.smallCats);
+  const increaseBigCats = catStore((state) => state.increaseBigCats);
+  const increaseSmallCats = catStore((state) => state.increaseSmallCats);
+  // 新增summary方法
+  const summary = catStore((state) => state.summary); 
+  */
+
+  /* -------------------- 2.批量返回所以状态元素 -------------------- */
+  const {
+    cats: { bigCats, smallCats },
+    increaseBigCats,
+    increaseSmallCats,
+    // 新增summary方法
+    summary,
+  } = catStore();
+  return (
+    <div className="box">
+      <h1>CatBox</h1>
+      <h2>big cats : {bigCats}</h2>
+      <h2>small cats : {smallCats}</h2>
+      <h2>{Math.random()}</h2>
+      <div>
+        <button onClick={increaseBigCats}>add big cats</button>
+        <button onClick={increaseSmallCats}>add small cats</button>
+        {/* 使用summary方法 */}
+        <button onClick={summary}>summary</button>
+      </div>
+    </div>
+  );
+};
+```
+
++ 验证：
+    + 当点击CatBox组件的add small cats按钮时，CatBox组件和CatBox2组件中的随机数发生了变化，因为2个组件都是用了smallCats属性；
+    + 当点击CatBox组件的add big cats按钮时，CatBox组件和CatBox2组件中的随机数发生了变化，虽然组件CatBox2并没有使用到bigCats元素，显然，组件CatBox2发生了页面的重绘问题
+
+使用selector
+
++ CatBox2组件中使用第一种方式，获取单个元素，并使用。 页面没有重绘
+
+    ```tsx
+    import { catStore } from "../stores/catStore";
+    
+    export const CatBox2 = () => {
+      // const {
+      //   cats: { smallCats },
+      // } = catStore();
+      /* -------------------- 使用selector获取 -------------------- */
+      const smallCats = catStore((state) => state.cats.smallCats);
+      return (
+        <div className="box">
+          <h1>CatBox2</h1>
+          <h2>big cats :{smallCats} </h2>
+          <h2>{Math.random()}</h2>
+        </div>
+      );
+    };
+    ```
+
+如何使用自动的selector？
+
++ 使用selector时，每次只能获取单个元素，如果需要使用大量的元素的话，显然很麻烦
+
++ 使用使用Zustand提供的封装的Auto Generating Selectors
+
+    + 创建一个新的组件CatController： component -> CatController.tsx， 并引入进APP
+
+        ```tsx
+        export const CatController = () => {
+          return (
+            <div className="box">
+              <h1>CatController</h1>
+              {/* 添加随机数，来验证页面的渲染 */}
+              <h3>{Math.random()}</h3>
+              <button>add big cats</button>
+              <button>add small cats</button>
+            </div>
+          );
+        };
+        ```
+
+        ```tsx
+        import { BearBox } from "./components/BearBox";
+        import { CatBox } from "./components/CatBox";
+        import { CatBox2 } from "./components/CatBox2";
+        import { CatController } from "./components/CatController";
+        
+        function App() {
+          return (
+            <div className="container">
+              <h1>Zustand Tutorial</h1>
+              <div>
+                <BearBox />
+              </div>
+              <div>
+                <CatBox />
+                <CatBox2 />
+                <CatController />
+              </div>
+            </div>
+          );
+        }
+        export default App;
+        ```
+
+    + 创建新的文件来存储提供的封装的Auto Generating Selectors， src -> utils ->createSelectors.ts
+
+        ```ts
+        import { StoreApi, UseBoundStore } from "zustand";
+        
+        type WithSelectors<S> = S extends { getState: () => infer T }
+          ? S & { use: { [K in keyof T]: () => T[K] } }
+          : never;
+        
+        export const createSelectors = <S extends UseBoundStore<StoreApi<object>>>(
+          _store: S
+        ) => {
+          const store = _store as WithSelectors<typeof _store>;
+          store.use = {};
+          for (const k of Object.keys(store.getState())) {
+            (store.use as any)[k] = () => store((s) => s[k as keyof typeof s]);
+          }
+        
+          return store;
+        };
+        ```
+
+    + 使用step1： 用createSelectors包裹catStore的create方法
+
+        ```tsx
+        import { create } from "zustand";
+        import { immer } from "zustand/middleware/immer";
+        import { createSelectors } from "../utils/createSelectors";
+        
+        type TcatStoreState = {
+          cats: {
+            bigCats: number;
+            smallCats: number;
+          };
+          increaseBigCats: () => void;
+          increaseSmallCats: () => void;
+          // 定义一个summary方法
+          summary: () => void;
+        };
+        
+        export const catStore = createSelectors(
+          create<TcatStoreState>()(
+            immer((set, get) => ({
+              cats: {
+                bigCats: 0,
+                smallCats: 0,
+              },
+              increaseBigCats: () =>
+                set((state) => {
+                  state.cats.bigCats++;
+                }),
+              increaseSmallCats: () =>
+                set((state) => {
+                  state.cats.smallCats++;
+                }),
+              /* ------------------- 使用get()访问state ------------------- */
+              summary: () => {
+                const totalCats = get().cats.smallCats + get().cats.bigCats;
+                alert("total cats is " + totalCats);
+              },
+            }))
+          )
+        );
+        ```
+
+    + 使用step2： 组件CatController中使用catStore.use钩子
+
+        ```tsx
+        import { catStore } from "../stores/catStore";
+        
+        export const CatController = () => {
+          /* --------------------- 会引发此组件的页面重绘 -------------------- */
+          // const { increaseBigCats, increaseSmallCats } = catStore();
+        
+          /* -------------------- 不会引发此组件的页面重绘 -------------------- */
+          const increaseBigCats = catStore.use.increaseBigCats();
+          const increaseSmallCats = catStore.use.increaseSmallCats();
+          return (
+            <div className="box">
+              <h1>CatController</h1>
+              {/* 添加随机数，来验证页面的渲染 */}
+              <h3>{Math.random()}</h3>
+              <button onClick={increaseBigCats}>add big cats</button>
+              <button onClick={increaseSmallCats}>add small cats</button>
+            </div>
+          );
+        };
+        ```
+
+    + 验证：点击组件CatController中的按钮，就不会引起CatController中随机数的变化，因为此组件没有使用到 bigCats和 smallCats
+
+注意点：使用提供的封装的Auto Generating Selectors，只能回去state下面第一层的元素，比如cats，无法获取其他层级的元素，比如 bigCats和 smallCats
+
+
+
+4. #### 使用shallow，一次获取多个状态
+
++ 上面的CatController中，我们使用Zustand提供的封装的代码auto selector可以获取第一次的状态值，并且不会引发页面的重绘为题，但是一次只能获取一个状态。
+
++ 能否一次多去多个状态呢？
+
++ 使用shallow可以实现multi selector
+
+在上面的CatController中，修改代码如下
+
+```tsx
+import { shallow } from "zustand/shallow";
+import { catStore } from "../stores/catStore";
+
+export const CatController = () => {
+  /* --------------------- 会引发此组件的页面重绘 -------------------- */
+  // const { increaseBigCats, increaseSmallCats } = catStore();
+
+  /* ------------- auto selector: 不会引发此组件的页面重绘 ------------ */
+  // const increaseBigCats = catStore.use.increaseBigCats();
+  // const increaseSmallCats = catStore.use.increaseSmallCats();
+
+  /* ------------------- multi-selector: ------------------ */
+  const { increaseBigCats, increaseSmallCats } = catStore(
+    (state) => ({
+      increaseBigCats: state.increaseBigCats,
+      increaseSmallCats: state.increaseSmallCats,
+    }),
+    shallow
+  );
+  return (
+    <div className="box">
+      <h1>CatController</h1>
+      {/* 添加随机数，来验证页面的渲染 */}
+      <h3>{Math.random()}</h3>
+      <button onClick={increaseBigCats}>add big cats</button>
+      <button onClick={increaseSmallCats}>add small cats</button>
+    </div>
+  );
+};
+```
 
 
 
