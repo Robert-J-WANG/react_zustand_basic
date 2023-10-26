@@ -711,16 +711,18 @@ export const CatController = () => {
   // const increaseSmallCats = catStore.use.increaseSmallCats();
 
   /* ------------------- multi-selector: ------------------ */
-  const { increaseBigCats, increaseSmallCats } = catStore(
+  const { increaseBigCats, increaseSmallCats, bigCats } = catStore(
     (state) => ({
       increaseBigCats: state.increaseBigCats,
       increaseSmallCats: state.increaseSmallCats,
+      bigCats: state.cats.bigCats, // 可以获取第二层的属性啦
     }),
     shallow
   );
   return (
     <div className="box">
       <h1>CatController</h1>
+      <h2>big cats {bigCats}</h2>
       {/* 添加随机数，来验证页面的渲染 */}
       <h3>{Math.random()}</h3>
       <button onClick={increaseBigCats}>add big cats</button>
@@ -730,5 +732,209 @@ export const CatController = () => {
 };
 ```
 
+注意：
 
++  shallow用来比较2次返回值的异同，如果相同，就不会引发重绘，如果不同，才会重绘
+
++ 使用multi selector，也可以获取第二层的属性了，比如bigCats。当点击add big cats按钮时，返回的bigCats与上次的不同，引发页面渲染； 但是，当点击add small cats按钮， 返回的bigCats与上次的相同，所以不会再次渲染页面
+
+
+
+5. #### devTools的使用 ：Redux-devtools
+
+  在Zustand， 通常将store模块化，即根据不同的状态的内容，做成一个个小的store
+
+使用方法：
+
++ 在每个store中，使用devTools把create函数中的initializer (回调函数)包起来, 以bearStore为例
+
+    ```ts
+    import { create } from "zustand";
+    import { devtools } from "zustand/middleware";
+    
+    type TBearStoreState = {
+      bears: number;
+      increasePopulation: () => void;
+      removeAllBears: () => void;
+    };
+    
+    export const useStore = create<TBearStoreState>()(
+      devtools((set) => ({
+        bears: 0,
+        increasePopulation: () => set((state) => ({ bears: state.bears + 1 })),
+        removeAllBears: () => set({ bears: 0 }),
+      }))
+    );
+    ```
+
++ 在网页的检查选项中，使用Redux-devtools中可以查看状态的变化了
+
+devTools设置开关
+
++ devtools添加第二个参数（配置对象），来设置devTools工具的开关
+
+     ```ts
+     import { create } from "zustand";
+     import { devtools } from "zustand/middleware";
+     
+     type TBearStoreState = {
+       bears: number;
+       increasePopulation: () => void;
+       removeAllBears: () => void;
+     };
+     
+     export const useStore = create<TBearStoreState>()(
+       devtools(
+         (set) => ({
+           bears: 0,
+           increasePopulation: () => set((state) => ({ bears: state.bears + 1 })),
+           removeAllBears: () => set({ bears: 0 }),
+         }),
+         {
+           enabled: true, // 是否开启开发者工具
+         }
+       )
+     );
+     ```
+
+ 使用多个插件时，devtools添加顺序？
+
++ devtools在插件immer 后面使用，应为immer会改变状态数据
+
++ 给catStore添加devtools工具
+
+    ```ts
+    import { create } from "zustand";
+    import { immer } from "zustand/middleware/immer";
+    import { createSelectors } from "../utils/createSelectors";
+    import { devtools } from "zustand/middleware";
+    
+    type TcatStoreState = {
+      cats: {
+        bigCats: number;
+        smallCats: number;
+      };
+      increaseBigCats: () => void;
+      increaseSmallCats: () => void;
+      // 定义一个summary方法
+      summary: () => void;
+    };
+    
+    export const catStore = createSelectors(
+      create<TcatStoreState>()(
+        immer(
+          devtools(
+            (set, get) => ({
+              cats: {
+                bigCats: 0,
+                smallCats: 0,
+              },
+              increaseBigCats: () =>
+                set((state) => {
+                  state.cats.bigCats++;
+                }),
+              increaseSmallCats: () =>
+                set((state) => {
+                  state.cats.smallCats++;
+                }),
+              /* ------------------- 使用get()访问state ------------------- */
+              summary: () => {
+                const totalCats = get().cats.smallCats + get().cats.bigCats;
+                alert("total cats is " + totalCats);
+              },
+            }),
+            {
+              enabled: true,
+            }
+          )
+        )
+      )
+    );
+    ```
+
+多个store时，给不同的instance自定义名称：devtools配置对象中添加name属性即可
+
++ bearStore添加名称
+
+    ```ts
+    import { create } from "zustand";
+    import { devtools } from "zustand/middleware";
+    
+    type TBearStoreState = {
+      bears: number;
+      increasePopulation: () => void;
+      removeAllBears: () => void;
+    };
+    
+    export const useStore = create<TBearStoreState>()(
+      devtools(
+        (set) => ({
+          bears: 0,
+          increasePopulation: () => set((state) => ({ bears: state.bears + 1 })),
+          removeAllBears: () => set({ bears: 0 }),
+        }),
+        {
+          enabled: true, // 是否开启开发者工具
+          name: "bear store", // 设置开发者工具中的名称
+        }
+      )
+    );
+    ```
+
++ catStore添加名称
+
+    ```ts
+    import { create } from "zustand";
+    import { immer } from "zustand/middleware/immer";
+    import { createSelectors } from "../utils/createSelectors";
+    import { devtools } from "zustand/middleware";
+    
+    type TcatStoreState = {
+      cats: {
+        bigCats: number;
+        smallCats: number;
+      };
+      increaseBigCats: () => void;
+      increaseSmallCats: () => void;
+      // 定义一个summary方法
+      summary: () => void;
+    };
+    
+    export const catStore = createSelectors(
+      create<TcatStoreState>()(
+        immer(
+          devtools(
+            (set, get) => ({
+              cats: {
+                bigCats: 0,
+                smallCats: 0,
+              },
+              increaseBigCats: () =>
+                set((state) => {
+                  state.cats.bigCats++;
+                }),
+              increaseSmallCats: () =>
+                set((state) => {
+                  state.cats.smallCats++;
+                }),
+              /* ------------------- 使用get()访问state ------------------- */
+              summary: () => {
+                const totalCats = get().cats.smallCats + get().cats.bigCats;
+                alert("total cats is " + totalCats);
+              },
+            }),
+            {
+              enabled: true,
+              name: "cat store", // 设置开发者工具中的名称
+            }
+          )
+        )
+      )
+    );
+    
+    ```
+
+
+
+6. #### 保存状态到本地存储插件 persist
 
