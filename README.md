@@ -123,6 +123,10 @@ export const BearBox = () => {
 
 
 
+++++++
+
+
+
 #### 2. Get( ) 和set( )方法的使用，及使用插件immer的优化
 
 Set( )方法是创建store时这create方法在中传入的。使用set方法可以更新状态数据
