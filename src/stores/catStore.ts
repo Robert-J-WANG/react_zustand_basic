@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import { createSelectors } from "../utils/createSelectors";
-import { devtools, persist } from "zustand/middleware";
+import { devtools, persist, subscribeWithSelector } from "zustand/middleware";
 
 type TcatStoreState = {
   cats: {
@@ -16,32 +16,38 @@ type TcatStoreState = {
 
 export const catStore = createSelectors(
   create<TcatStoreState>()(
+    // 直接更改状态
     immer(
+      // 开发者工具
       devtools(
-        persist(
-          (set, get) => ({
-            cats: {
-              bigCats: 0,
-              smallCats: 0,
-            },
-            increaseBigCats: () =>
-              set((state) => {
-                state.cats.bigCats++;
-              }),
-            increaseSmallCats: () =>
-              set((state) => {
-                state.cats.smallCats++;
-              }),
-            /* ------------------- 使用get()访问state ------------------- */
-            summary: () => {
-              const totalCats = get().cats.smallCats + get().cats.bigCats;
-              alert("total cats is " + totalCats);
-            },
-          }),
-          /* ----------------- 本地存储插件persist的配置对象 ----------------- */
-          {
-            name: "cat store",
-          }
+        // 订阅部分所选状态
+        subscribeWithSelector(
+          // 存取本地数据
+          persist(
+            (set, get) => ({
+              cats: {
+                bigCats: 0,
+                smallCats: 0,
+              },
+              increaseBigCats: () =>
+                set((state) => {
+                  state.cats.bigCats++;
+                }),
+              increaseSmallCats: () =>
+                set((state) => {
+                  state.cats.smallCats++;
+                }),
+              /* ------------------- 使用get()访问state ------------------- */
+              summary: () => {
+                const totalCats = get().cats.smallCats + get().cats.bigCats;
+                alert("total cats is " + totalCats);
+              },
+            }),
+            /* ----------------- 本地存储插件persist的配置对象 ----------------- */
+            {
+              name: "cat store",
+            }
+          )
         ),
         /* -------------------- 开发者工具插件的配置对象 -------------------- */
         {

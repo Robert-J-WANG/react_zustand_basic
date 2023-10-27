@@ -2,11 +2,14 @@ import { useEffect, useState } from "react";
 import { bearStore } from "../stores/bearStore";
 import { foodStore } from "../stores/foodStore";
 import { shallow } from "zustand/shallow";
+import { catStore } from "../stores/catStore";
 
 export const BearBox = () => {
   const { bears, increasePopulation, removeAllBears, resetState } = bearStore();
   /* -------------------- 创建本地状态，存储背景颜色 ------------------- */
   const [bgColor, setBgColor] = useState("lightPink");
+  /* -------------------- 创建本地状态，存储字体颜色 ------------------- */
+  const [fontColor, setFontColor] = useState("black");
 
   /* -----------------1. 直接从store获取fish状态属性 ----------------- */
   /* ----------------------- 会引起页面重绘 ---------------------- */
@@ -22,6 +25,7 @@ export const BearBox = () => {
     //   else if (prevState.fish > 5 && state.fish <= 5) setBgColor("lightPink");
     // });
 
+    /* -------------------- 订阅foodStore状态 ------------------- */
     const unsb = foodStore.subscribe(
       (state) => state.fish, // 只关心fish属性
       (fish, prevFish) => {
@@ -34,16 +38,31 @@ export const BearBox = () => {
         fireImmediately: true, //是否立即执行， 默认是false
       }
     );
-
     /* ------------------------ 取消订阅 ------------------------ */
     return unsb;
+  }, []);
+
+  /* -------------------- 订阅catStore状态 -------------------- */
+  useEffect(() => {
+    const unsbCat = catStore.subscribe(
+      (state) => state.cats.bigCats,
+      (bigCats, prevBigCats) => {
+        if (prevBigCats <= 5 && bigCats > 5) {
+          setFontColor("purple");
+        } else if (prevBigCats > 5 && bigCats <= 5) {
+          setBgColor("black");
+        }
+      }
+    );
+    /* ------------------------ 取消订阅 ------------------------ */
+    return unsbCat;
   }, []);
 
   return (
     <div
       className="box"
-      /* ----------------------- 设置背景颜色 ----------------------- */
-      style={{ background: bgColor }}
+      /* ----------------设置背景颜色，设置字体颜色 ----------------- */
+      style={{ background: bgColor, color: fontColor }}
     >
       <h1>BearBox</h1>
       <h2>bears : {bears}</h2>

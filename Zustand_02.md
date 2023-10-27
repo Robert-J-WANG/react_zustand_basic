@@ -891,12 +891,137 @@
 
 + 给catStore使用subscribeWithSelector插件
 
+    ```ts
+    import { create } from "zustand";
+    import { immer } from "zustand/middleware/immer";
+    import { createSelectors } from "../utils/createSelectors";
+    import { devtools, persist, subscribeWithSelector } from "zustand/middleware";
+    
+    type TcatStoreState = {
+      cats: {
+        bigCats: number;
+        smallCats: number;
+      };
+      increaseBigCats: () => void;
+      increaseSmallCats: () => void;
+      // 定义一个summary方法
+      summary: () => void;
+    };
+    
+    export const catStore = createSelectors(
+      create<TcatStoreState>()(
+        // 直接更改状态
+        immer(
+          // 开发者工具
+          devtools(
+            // 订阅部分所选状态
+            subscribeWithSelector(
+              // 存取本地数据
+              persist(
+                (set, get) => ({
+                  cats: {
+                    bigCats: 0,
+                    smallCats: 0,
+                  },
+                  increaseBigCats: () =>
+                    set((state) => {
+                      state.cats.bigCats++;
+                    }),
+                  increaseSmallCats: () =>
+                    set((state) => {
+                      state.cats.smallCats++;
+                    }),
+                  /* ------------------- 使用get()访问state ------------------- */
+                  summary: () => {
+                    const totalCats = get().cats.smallCats + get().cats.bigCats;
+                    alert("total cats is " + totalCats);
+                  },
+                }),
+                /* ----------------- 本地存储插件persist的配置对象 ----------------- */
+                {
+                  name: "cat store",
+                }
+              )
+            ),
+            /* -------------------- 开发者工具插件的配置对象 -------------------- */
+            {
+              enabled: true,
+              name: "cat store", // 设置开发者工具中的名称
+            }
+          )
+        )
+      )
+    );
     ```
+
++ bearBox订阅cat属性
+
+    ```tsx
+    import { useEffect, useState } from "react";
+    import { bearStore } from "../stores/bearStore";
+    import { foodStore } from "../stores/foodStore";
+    import { shallow } from "zustand/shallow";
+    import { catStore } from "../stores/catStore";
+    
+    export const BearBox = () => {
+      const { bears, increasePopulation, removeAllBears, resetState } = bearStore();
+      /* -------------------- 创建本地状态，存储背景颜色 ------------------- */
+      const [bgColor, setBgColor] = useState("lightPink");
+      /* -------------------- 创建本地状态，存储字体颜色 ------------------- */
+      const [fontColor, setFontColor] = useState("black");
+      useEffect(() => {
+        /* -------------------- 订阅foodStore状态 ------------------- */
+        const unsb = foodStore.subscribe(
+          (state) => state.fish, // 只关心fish属性
+          (fish, prevFish) => {
+            if (prevFish <= 5 && fish > 5) setBgColor("lightGreen");
+            else if (prevFish > 5 && fish <= 5) setBgColor("lightPink");
+          },
+          /* ------------------------ 可选参数对象 ------------------------ */
+          {
+            equalityFn: shallow, // 判断是否相同
+            fireImmediately: true, //是否立即执行， 默认是false
+          }
+        );
+        /* ------------------------ 取消订阅 ------------------------ */
+        return unsb;
+      }, []);
+    
+      /* -------------------- 订阅catStore状态 -------------------- */
+      useEffect(() => {
+        const unsbCat = catStore.subscribe(
+          (state) => state.cats.bigCats,
+          (bigCats, prevBigCats) => {
+            if (prevBigCats <= 5 && bigCats > 5) {
+              setFontColor("purple");
+            } else if (prevBigCats > 5 && bigCats <= 5) {
+              setBgColor("black");
+            }
+          }
+        );
+        /* ------------------------ 取消订阅 ------------------------ */
+        return unsbCat;
+      }, []);
+    
+      return (
+        <div
+          className="box"
+          /* ----------------设置背景颜色，设置字体颜色 ----------------- */
+          style={{ background: bgColor, color: fontColor }}
+        >
+          <h1>BearBox</h1>
+          <h2>bears : {bears}</h2>
+          {/* ------------------- 添加随机数，验证页面重绘问题 ------------------- */}
+          <h2>{Math.random()}</h2>
+          <button onClick={increasePopulation}>add bear</button>
+          <button onClick={removeAllBears}>remove All Bears</button>
+          <button onClick={resetState}>reset state</button>
+        </div>
+      );
+    };
     ```
 
     
-
-
 
 
 
