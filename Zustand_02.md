@@ -1023,5 +1023,207 @@
 
     
 
+#### 9. 分离action，简化store
 
+1. 说明
 
++ store提供了2个方法getState( )和setState( )， 可以在store之外获取和设置state，分离action
++ 借用这2个方法，可以在store之外编写业务逻辑代码，简化store
+
+2. 如何使用setState( )？
+
++ foodstore中添加插件devtools和persist
+
+    ```ts
+    import { create } from "zustand";
+    import { devtools, persist, subscribeWithSelector } from "zustand/middleware";
+    
+    type TFishStoreState = {
+      fish: number;
+      addOneFish: () => void;
+      removeOneFish: () => void;
+      removeAllFish: () => void;
+    };
+    
+    export const foodStore = create<TFishStoreState>()(
+      devtools(
+        subscribeWithSelector(
+          persist(
+            (set) => ({
+              fish: 0,
+              addOneFish: () => set((state) => ({ fish: state.fish + 1 })),
+              removeOneFish: () => set((state) => ({ fish: state.fish - 1 })),
+              removeAllFish: () => set(() => ({ fish: 0 })),
+            }),
+            {
+              name: "food store",
+            }
+          )
+        ),
+        {
+          name: "food store",
+        }
+      )
+    );
+    ```
+
++ 使用setState( )， 在store外面更新状态
+
+    ```
+    import { foodStore } from "../stores/foodStore";
+    
+    export const FoodBox = () => {
+      const fish = foodStore((state) => state.fish);
+      const addOneFish = foodStore((state) => state.addOneFish);
+      const removeOneFish = foodStore((state) => state.removeOneFish);
+      const removeAllFish = foodStore((state) => state.removeAllFish);
+    
+      /* -------------- 使用setState方法，在store外面更新状态 ------------- */
+      const add5Fish = () => {
+        foodStore.setState((state) => ({
+          fish: state.fish + 5,
+        }));
+      };
+    
+      return (
+        <div className="box">
+          <h1>FoodBox</h1>
+          <h2>Fish:{fish} </h2>
+          <button onClick={addOneFish}>add 1 fish</button>
+          <button onClick={removeOneFish}>remove 1 fish</button>
+          <button onClick={removeAllFish}>remove all fish</button>
+    
+          <button onClick={add5Fish}>add 5 Fish</button>
+        </div>
+      );
+    };
+    ```
+
+3. 如何使用getState( )？
+
++ getState( )获取的状态是non-reactive的，即虽然状态值变化了，但不会渲染到页面中
++ getState可用来初始化？？？？？
+
+4. 最重要的用途：将action和state相分离
+
++ 分离出foodStore中的action方法
+
+    ```ts
+    import { create } from "zustand";
+    import { devtools, persist, subscribeWithSelector } from "zustand/middleware";
+    
+    type TFishStoreState = {
+      fish: number;
+    };
+    
+    export const foodStore = create<TFishStoreState>()(
+      devtools(
+        subscribeWithSelector(
+          persist(
+            () => ({
+              fish: 0,
+            }),
+            {
+              name: "food store",
+            }
+          )
+        ),
+        {
+          name: "food store",
+        }
+      )
+    );
+    
+    export const addOneFish = () =>
+      foodStore.setState((state) => ({ fish: state.fish + 1 }));
+    export const removeOneFish = () =>
+      foodStore.setState((state) => ({ fish: state.fish - 1 }));
+    export const removeAllFish = () => foodStore.setState(() => ({ fish: 0 }));
+    ```
+
++ 进一步简化：添加initState,  删除类型定义，添加类型为**typeof** initState
+
+    ```ts
+    import { create } from "zustand";
+    import { devtools, persist, subscribeWithSelector } from "zustand/middleware";
+    
+    const initState = {
+      fish: 0,
+    };
+    export const foodStore = create<typeof initState>()(
+      devtools(
+        subscribeWithSelector(
+          persist(
+              () => initState, 
+              {name: "food store"}
+          )),
+        { name: "food store"}
+      )
+    );
+    
+    export const addOneFish = () =>
+      foodStore.setState((state) => ({ fish: state.fish + 1 }));
+    export const removeOneFish = () =>
+      foodStore.setState((state) => ({ fish: state.fish - 1 }));
+    export const removeAllFish = () => foodStore.setState(() => ({ fish: 0 }));
+    
+    ```
+
++ 这样可以随时添加新的状态，而不需另外的类型定义
+
+     ```ts
+     import { create } from "zustand";
+     import { devtools, persist, subscribeWithSelector } from "zustand/middleware";
+     
+     const initState = {
+       fish: 0,
+       // 添加新的状态
+       color: "golden",
+     };
+     export const foodStore = create<typeof initState>()(
+       devtools(
+         subscribeWithSelector(
+           persist(
+               () => initState, 
+               {name: "food store"}
+           )),
+         { name: "food store"}
+       )
+     );
+     
+     export const addOneFish = () =>
+       foodStore.setState((state) => ({ fish: state.fish + 1 }));
+     export const removeOneFish = () =>
+       foodStore.setState((state) => ({ fish: state.fish - 1 }));
+     export const removeAllFish = () => foodStore.setState(() => ({ fish: 0 }));
+     
+     ```
+
++ foodBox中引入action，并使用
+
+    ```tsx
+    import {foodStore, addOneFish,  removeOneFish, removeAllFish} from "../stores/foodStore";
+    
+    export const FoodBox = () => {
+      const fish = foodStore((state) => state.fish);
+      /* -------------- 使用setState方法，在store外面更新状态 ------------- */
+      const add5Fish = () => {
+        foodStore.setState((state) => ({
+          fish: state.fish + 5,
+        }));
+      };
+    
+      return (
+        <div className="box">
+          <h1>FoodBox</h1>
+          <h2>Fish:{fish} </h2>
+          <button onClick={addOneFish}>add 1 fish</button>
+          <button onClick={removeOneFish}>remove 1 fish</button>
+          <button onClick={removeAllFish}>remove all fish</button>
+          <button onClick={add5Fish}>add 5 Fish</button>
+        </div>
+      );
+    };
+    ```
+
+    

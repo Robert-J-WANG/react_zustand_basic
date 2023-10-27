@@ -1,10 +1,18 @@
-import { foodStore } from "../stores/foodStore";
+import {
+  foodStore,
+  addOneFish,
+  removeOneFish,
+  removeAllFish,
+} from "../stores/foodStore";
 
 export const FoodBox = () => {
   const fish = foodStore((state) => state.fish);
-  const addOneFish = foodStore((state) => state.addOneFish);
-  const removeOneFish = foodStore((state) => state.removeOneFish);
-  const removeAllFish = foodStore((state) => state.removeAllFish);
+  /* -------------- 使用setState方法，在store外面更新状态 ------------- */
+  const add5Fish = () => {
+    foodStore.setState((state) => ({
+      fish: state.fish + 5,
+    }));
+  };
 
   return (
     <div className="box">
@@ -13,6 +21,7 @@ export const FoodBox = () => {
       <button onClick={addOneFish}>add 1 fish</button>
       <button onClick={removeOneFish}>remove 1 fish</button>
       <button onClick={removeAllFish}>remove all fish</button>
+      <button onClick={add5Fish}>add 5 Fish</button>
     </div>
   );
 };

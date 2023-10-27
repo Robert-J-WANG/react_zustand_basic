@@ -1,18 +1,26 @@
 import { create } from "zustand";
-import { subscribeWithSelector } from "zustand/middleware";
+import { devtools, persist, subscribeWithSelector } from "zustand/middleware";
 
-type TFishStoreState = {
-  fish: number;
-  addOneFish: () => void;
-  removeOneFish: () => void;
-  removeAllFish: () => void;
+const initState = {
+  fish: 0,
+  // 添加新的状态
+  color: "golden",
 };
-
-export const foodStore = create<TFishStoreState>()(
-  subscribeWithSelector((set) => ({
-    fish: 0,
-    addOneFish: () => set((state) => ({ fish: state.fish + 1 })),
-    removeOneFish: () => set((state) => ({ fish: state.fish - 1 })),
-    removeAllFish: () => set(() => ({ fish: 0 })),
-  }))
+export const foodStore = create<typeof initState>()(
+  devtools(
+    subscribeWithSelector(
+      persist(() => initState, {
+        name: "food store",
+      })
+    ),
+    {
+      name: "food store",
+    }
+  )
 );
+
+export const addOneFish = () =>
+  foodStore.setState((state) => ({ fish: state.fish + 1 }));
+export const removeOneFish = () =>
+  foodStore.setState((state) => ({ fish: state.fish - 1 }));
+export const removeAllFish = () => foodStore.setState(() => ({ fish: 0 }));
