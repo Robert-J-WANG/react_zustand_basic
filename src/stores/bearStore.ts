@@ -10,7 +10,7 @@ type TBearStoreState = {
   resetState: () => void;
 };
 
-export const useStore = create<TBearStoreState>()(
+export const bearStore = create<TBearStoreState>()(
   persist(
     (set) => ({
       bears: 0,
@@ -20,7 +20,6 @@ export const useStore = create<TBearStoreState>()(
       removeAllBears: () => set({ bears: 0 }),
       // 重置状态
       resetState: () => {
-        console.log(1111);
         set(() => ({ bears: 0, color: "red", size: "big" }));
       },
     }),

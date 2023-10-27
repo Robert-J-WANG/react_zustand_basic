@@ -548,7 +548,355 @@
     );
     ```
 
+
+
+
+#### 7. subscribe功能
+
+1. 介绍：
+
++ store的subscribe功能用于订阅全局状态（组件之间的订阅），但不重渲染。而从store里叫出来的state是active的，即每一次state改变，都会引起页面重新渲染
++ subscribe只在订阅的状态值满足某个条件时才触发渲染，不必每次状态改变都触发渲染
++ 举例说明：上面的bearStore中，bear吃鱼，设置一个鱼的store，让bear订阅fish，只有当fish<5时，才会引起bear页面的重渲染，而其他fish的变化，不会一起bear页面的重渲染
+
+2. 为何要使用subscribe插件？
+
++ 创建一个foodStore和FoodBox组件，并将组件引入到app中
+
+    ```ts
+    import { create } from "zustand";
     
+    type TFishStoreState = {
+      fish: number;
+      addOneFish: () => void;
+      removeOneFish: () => void;
+      removeAllFish: () => void;
+    };
+    
+    export const foodStore = create<TFishStoreState>()((set) => ({
+      fish: 0,
+      addOneFish: () => set((state) => ({ fish: state.fish + 1 })),
+      removeOneFish: () => set((state) => ({ fish: state.fish - 1 })),
+      removeAllFish: () => set(() => ({ fish: 0 })),
+    }));
+    
+    ```
+
+    ```tsx
+    import { foodStore } from "../stores/foodStore";
+    
+    export const FoodBox = () => {
+      const fish = foodStore((state) => state.fish);
+      const addOneFish = foodStore((state) => state.addOneFish);
+      const removeOneFish = foodStore((state) => state.removeOneFish);
+      const removeAllFish = foodStore((state) => state.removeAllFish);
+    
+      return (
+        <div className="box">
+          <h1>FoodBox</h1>
+          <h2>Fish:{fish} </h2>
+          <button onClick={addOneFish}>add 1 fish</button>
+          <button onClick={removeOneFish}>remove 1 fish</button>
+          <button onClick={removeAllFish}>remove all fish</button>
+        </div>
+      );
+    };
+    
+    ```
+
+    ```tsx
+    import { BearBox } from "./components/BearBox";
+    import { CatBox } from "./components/CatBox";
+    import { CatBox2 } from "./components/CatBox2";
+    import { CatController } from "./components/CatController";
+    import { FoodBox } from "./components/FoodBox";
+    
+    function App() {
+      return (
+        <div className="container">
+          <h1>Zustand Tutorial</h1>
+          <div>
+            <BearBox />
+            <FoodBox />
+          </div>
+          <div>
+            <CatBox />
+            <CatBox2 />
+            <CatController />
+          </div>
+        </div>
+      );
+    }
+    export default App;
+    
+    ```
+
++ bearBox组件使用fish状态，并设置背景颜色（fish<5,食物短缺，红色警告；fish>=5时，食物充足，绿色安全）
+
+    ```tsx
+    import { bearStore } from "../stores/bearStore";
+    import { foodStore } from "../stores/foodStore";
+    
+    export const BearBox = () => {
+      const { bears, increasePopulation, removeAllBears, resetState } = bearStore();
+    
+      /* --------------------- 获取fish状态属性 --------------------- */
+      const fish = foodStore((state) => state.fish);
+      return (
+        <div
+          className="box"
+          /* ----------------------- 设置背景颜色 ----------------------- */
+          style={{ background: fish < 5 ? "lightPink" : "lightGreen" }}
+        >
+          <h1>BearBox</h1>
+          <h2>bears : {bears}</h2>
+          <button onClick={increasePopulation}>add bear</button>
+          <button onClick={removeAllBears}>remove All Bears</button>
+          <button onClick={resetState}>reset state</button>
+        </div>
+      );
+    };
+    ```
+
++ 问题：虽然能实现逻辑功能，但是bearBox组件有页面重绘的问题，即，每次fish的改变，都会重新加载页面，添加随机数验证
+
+    ```tsx
+    import { bearStore } from "../stores/bearStore";
+    import { foodStore } from "../stores/foodStore";
+    
+    export const BearBox = () => {
+      const { bears, increasePopulation, removeAllBears, resetState } = bearStore();
+    
+      /* --------------------- 获取fish状态属性 --------------------- */
+      const fish = foodStore((state) => state.fish);
+      return (
+        <div
+          className="box"
+          /* ----------------------- 设置背景颜色 ----------------------- */
+          style={{ background: fish < 5 ? "lightPink" : "lightGreen" }}
+        >
+          <h1>BearBox</h1>
+          <h2>bears : {bears}</h2>
+          {/* ------------------- 添加随机数，验证页面重绘问题 ------------------- */}
+          <h2>{Math.random()}</h2>
+          <button onClick={increasePopulation}>add bear</button>
+          <button onClick={removeAllBears}>remove All Bears</button>
+          <button onClick={resetState}>reset state</button>
+        </div>
+      );
+    };
+    ```
+
++ 解决方案：使用subscribe插件
+
+3. 如何使用subscribe插件？
+
++ 调用store的subscribe方法，并传入一个回调函数，通过回调函数的返回值来获取需要的属性
+
++ subscribe方法既能用在component外面，也能用在component里面，用在component里面时，尽量在useEffect钩子内部使用，这样subscribe方法只会在组件第一次加载时执行，
+
++ subscribe方法返回值是一个unsubscribe取消订阅方法，在useEffect钩子return unsubscribe方法取消订阅
+
++ BearBox中使用foodStore的subscribe
+
+    ```tsx
+    import { useEffect } from "react";
+    import { bearStore } from "../stores/bearStore";
+    import { foodStore } from "../stores/foodStore";
+    import { StateCreator } from "zustand";
+    
+    export const BearBox = () => {
+      const { bears, increasePopulation, removeAllBears, resetState } = bearStore();
+    
+      /* -----------------1. 直接从store获取fish状态属性 ----------------- */
+      /* ----------------------- 会引起页面重绘 ---------------------- */
+      // const fish = foodStore((state) => state.fish);
+    
+      /* ------------ 2. 使用subscribe获取fish，不会引起页面重绘 ----------- */
+      /* -------------- 要在useEffect钩子内部使用，还可以取消订阅 ------------- */
+      useEffect(() => {
+        /* ------------ subscribe方法会返回一个unsubscribe方法 ----------- */
+        const unsb = foodStore.subscribe((state, prevState) => {
+          console.log(state, prevState);
+        });
+        // console.log(unsb); // () => listeners.delete(listener)
+        /* ------------------------ 取消订阅 ------------------------ */
+        return unsb;
+      }, []);
+    
+      return (
+        <div
+          className="box"
+          /* ----------------------- 设置背景颜色 ----------------------- */
+          // style={{ background: fish < 5 ? "lightPink" : "lightGreen" }}
+        >
+          <h1>BearBox</h1>
+          <h2>bears : {bears}</h2>
+          {/* ------------------- 添加随机数，验证页面重绘问题 ------------------- */}
+          <h2>{Math.random()}</h2>
+          <button onClick={increasePopulation}>add bear</button>
+          <button onClick={removeAllBears}>remove All Bears</button>
+          <button onClick={resetState}>reset state</button>
+        </div>
+      );
+    };
+    ```
+
++ 如何改变背景色？ 创建一个本地状态bgColor，并在useEffect中更新bgColor，将bgColor添加到style中
+
+    ```tsx
+    import { useEffect, useState } from "react";
+    import { bearStore } from "../stores/bearStore";
+    import { foodStore } from "../stores/foodStore";
+    
+    export const BearBox = () => {
+      const { bears, increasePopulation, removeAllBears, resetState } = bearStore();
+      /* -------------------- 创建本地状态，存储背景颜色 ------------------- */
+      const [bgColor, setBgColor] = useState("lightPink");
+    
+      /* -----------------1. 直接从store获取fish状态属性 ----------------- */
+      /* ----------------------- 会引起页面重绘 ---------------------- */
+      // const fish = foodStore((state) => state.fish);
+    
+      /* ------------ 2. 使用subscribe获取fish，不会引起页面重绘 ----------- */
+      /* -------------- 要在useEffect钩子内部使用，还可以取消订阅 ------------- */
+      useEffect(() => {
+        /* ------------ subscribe方法会返回一个unsubscribe方法 ----------- */
+        const unsb = foodStore.subscribe((state, prevState) => {
+          console.log(state, prevState);
+          /* ----------- 订阅foodStore的fish值，更新本地状态bgColor ---------- */
+          if (prevState.fish <= 5 && state.fish > 5) setBgColor("lightGreen");
+          else if (prevState.fish > 5 && state.fish <= 5) setBgColor("lightPink");
+        });
+        // console.log(unsb); // () => listeners.delete(listener)
+        /* ------------------------ 取消订阅 ------------------------ */
+        return unsb;
+      }, []);
+    
+      return (
+        <div
+          className="box"
+          /* ----------------------- 设置背景颜色 ----------------------- */
+          style={{ background: bgColor }}
+        >
+          <h1>BearBox</h1>
+          <h2>bears : {bears}</h2>
+          {/* ------------------- 添加随机数，验证页面重绘问题 ------------------- */}
+          <h2>{Math.random()}</h2>
+          <button onClick={increasePopulation}>add bear</button>
+          <button onClick={removeAllBears}>remove All Bears</button>
+          <button onClick={resetState}>reset state</button>
+        </div>
+      );
+    };
+    ```
+
+
+
+#### 8. subscribeWithSelector插件
+
+1. 什么情况下使用？
+    + 当有很多个状态，但只关心其中的某些部分状态时
+
+2. 如何使用？
+
++ 和其他插件的使用方式类似，包裹create方法里的初始对象
+
+    ```ts
+    import { create } from "zustand";
+    import { subscribeWithSelector } from "zustand/middleware";
+    
+    type TFishStoreState = {
+      fish: number;
+      addOneFish: () => void;
+      removeOneFish: () => void;
+      removeAllFish: () => void;
+    };
+    
+    export const foodStore = create<TFishStoreState>()(
+      subscribeWithSelector((set) => ({
+        fish: 0,
+        addOneFish: () => set((state) => ({ fish: state.fish + 1 })),
+        removeOneFish: () => set((state) => ({ fish: state.fish - 1 })),
+        removeAllFish: () => set(() => ({ fish: 0 })),
+      }))
+    );
+    ```
+
++ bearBox中修改订阅的代码
+
+    ```tsx
+    import { useEffect, useState } from "react";
+    import { bearStore } from "../stores/bearStore";
+    import { foodStore } from "../stores/foodStore";
+    import { shallow } from "zustand/shallow";
+    
+    export const BearBox = () => {
+      const { bears, increasePopulation, removeAllBears, resetState } = bearStore();
+      /* -------------------- 创建本地状态，存储背景颜色 ------------------- */
+      const [bgColor, setBgColor] = useState("lightPink");
+    
+      /* -----------------1. 直接从store获取fish状态属性 ----------------- */
+      /* ----------------------- 会引起页面重绘 ---------------------- */
+      // const fish = foodStore((state) => state.fish);
+    
+      /* ------------ 2. 使用subscribe获取fish，不会引起页面重绘 ----------- */
+      /* -------------- 要在useEffect钩子内部使用，还可以取消订阅 ------------- */
+      useEffect(() => {
+        // const unsb = foodStore.subscribe((state, prevState) => {
+        //   console.log(state, prevState);
+        //   /* ----------- 订阅foodStore的fish值，更新本地状态bgColor ---------- */
+        //   if (prevState.fish <= 5 && state.fish > 5) setBgColor("lightGreen");
+        //   else if (prevState.fish > 5 && state.fish <= 5) setBgColor("lightPink");
+        // });
+    
+        const unsb = foodStore.subscribe(
+          (state) => state.fish, // 只关心fish属性
+          (fish, prevFish) => {
+            if (prevFish <= 5 && fish > 5) setBgColor("lightGreen");
+            else if (prevFish > 5 && fish <= 5) setBgColor("lightPink");
+          },
+          /* ------------------------ 可选参数对象 ------------------------ */
+          {
+            equalityFn: shallow, // 判断是否相同
+            fireImmediately: true, //是否立即执行， 默认是false
+          }
+        );
+    
+        /* ------------------------ 取消订阅 ------------------------ */
+        return unsb;
+      }, []);
+    
+      return (
+        <div
+          className="box"
+          /* ----------------------- 设置背景颜色 ----------------------- */
+          style={{ background: bgColor }}
+        >
+          <h1>BearBox</h1>
+          <h2>bears : {bears}</h2>
+          {/* ------------------- 添加随机数，验证页面重绘问题 ------------------- */}
+          <h2>{Math.random()}</h2>
+          <button onClick={increasePopulation}>add bear</button>
+          <button onClick={removeAllBears}>remove All Bears</button>
+          <button onClick={resetState}>reset state</button>
+        </div>
+      );
+    };
+    ```
+
+3. 多个插件的顺序？
+
++ subscribeWithSelector插件放置在devTools和persist插件的中间
+
++ 给catStore使用subscribeWithSelector插件
+
+    ```
+    ```
+
+    
+
+
 
 
 
