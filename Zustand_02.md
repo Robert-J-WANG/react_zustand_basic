@@ -1424,4 +1424,16 @@
 
 3. 更推荐使用后一种简化方式
 
+
+
 #### 10. 大总结
+
+1. 插件
+    + immer：用来直接修改原状态
+    + devTools: 设置开发者工具的使用，可选的配置对象，可设置name属性，enabled属性
+    + subscribeWithSelector： 设置订阅组件之间部分状态，当此状态满足条件时，才触发页面的渲染
+    + persist： 存取本地数据，必须配置对象，设置name属性，可先保存的位置
+2. 组件中使用订阅功能时，订阅写进useEffect钩子中，并且可以取消订阅
+3. 根据state的内容，分割成多个store
+4. 使用auto-selector和muilt-selector, 可以防止页面重绘
+5. 使用getState( )和setState( )， 可以在store外部读取和更新状态，从而将state数据和action方法相分离，简化store的代码
