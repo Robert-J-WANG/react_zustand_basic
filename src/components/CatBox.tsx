@@ -1,4 +1,9 @@
-import { catStore } from "../stores/catStore";
+import {
+  catStore,
+  increaseBigCats,
+  increaseSmallCats,
+  summary,
+} from "../stores/catStore";
 
 export const CatBox = () => {
   /* --------------------- 1.返回单个状态元素 --------------------- */
@@ -14,10 +19,6 @@ export const CatBox = () => {
   /* -------------------- 2.批量返回所以状态元素 -------------------- */
   const {
     cats: { bigCats, smallCats },
-    increaseBigCats,
-    increaseSmallCats,
-    // 新增summary方法
-    summary,
   } = catStore();
   return (
     <div className="box">

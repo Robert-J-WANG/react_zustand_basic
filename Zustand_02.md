@@ -1226,4 +1226,202 @@
     };
     ```
 
+#### 9. 另一种简化store的方法: 抽离create方法中的核心部分
+
+1. 怎么实现？
+
++ 以catStore为例，选择create方法中的核心部分，右键 -> Refactor ->Extract to constant in enclosing scope -> 命名为“ catSlice” 
+
+    ```ts
+    import { create } from "zustand";
+    import { immer } from "zustand/middleware/immer";
+    import { createSelectors } from "../utils/createSelectors";
+    import { devtools, persist, subscribeWithSelector } from "zustand/middleware";
     
+    type TcatStoreState = {
+      cats: {
+        bigCats: number;
+        smallCats: number;
+      };
+      increaseBigCats: () => void;
+      increaseSmallCats: () => void;
+      // 定义一个summary方法
+      summary: () => void;
+    };
+    
+    const catSlice = (set, get) => ({
+      cats: {
+        bigCats: 0,
+        smallCats: 0,
+      },
+      increaseBigCats: () => set((state) => {
+        state.cats.bigCats++;
+      }),
+      increaseSmallCats: () => set((state) => {
+        state.cats.smallCats++;
+      }),
+      /* ------------------- 使用get()访问state ------------------- */
+      summary: () => {
+        const totalCats = get().cats.smallCats + get().cats.bigCats;
+        alert("total cats is " + totalCats);
+      },
+    });
+    export const catStore = createSelectors(
+      create<TcatStoreState>()(
+        // 直接更改状态
+        immer(
+          // 开发者工具
+          devtools(
+            // 订阅部分所选状态
+            subscribeWithSelector(
+              // 存取本地数据
+              persist(
+                catSlice,
+                /* ----------------- 本地存储插件persist的配置对象 ----------------- */
+                {
+                  name: "cat store",
+                }
+              )
+            ),
+            /* -------------------- 开发者工具插件的配置对象 -------------------- */
+            {
+              enabled: true,
+              name: "cat store", // 设置开发者工具中的名称
+            }
+          )
+        )
+      )
+    );
+    ```
+
++ 给抽离的catSlice添加类型
+
+    ```ts
+    import { StateCreator, create } from "zustand";
+    import { immer } from "zustand/middleware/immer";
+    import { createSelectors } from "../utils/createSelectors";
+    import { devtools, persist, subscribeWithSelector } from "zustand/middleware";
+    
+    type TcatStoreState = {
+      cats: {
+        bigCats: number;
+        smallCats: number;
+      };
+      increaseBigCats: () => void;
+      increaseSmallCats: () => void;
+      // 定义一个summary方法
+      summary: () => void;
+    };
+    
+    const catSlice: StateCreator<
+      TcatStoreState,
+      [
+        ["zustand/immer", never],
+        ["zustand/devtools", unknown],
+        ["zustand/subscribeWithSelector", never],
+        ["zustand/persist", unknown]
+      ]
+    > = (set, get) => ({
+      cats: {
+        bigCats: 0,
+        smallCats: 0,
+      },
+      increaseBigCats: () =>
+        set((state) => {
+          state.cats.bigCats++;
+        }),
+      increaseSmallCats: () =>
+        set((state) => {
+          state.cats.smallCats++;
+        }),
+      /* ------------------- 使用get()访问state ------------------- */
+      summary: () => {
+        const totalCats = get().cats.smallCats + get().cats.bigCats;
+        alert("total cats is " + totalCats);
+      },
+    });
+    export const catStore = createSelectors(
+      create<TcatStoreState>()(
+        // 直接更改状态
+        immer(
+          // 开发者工具
+          devtools(
+            // 订阅部分所选状态
+            subscribeWithSelector(
+              // 存取本地数据
+              persist(
+                catSlice,
+                /* ----------------- 本地存储插件persist的配置对象 ----------------- */
+                {name: "cat store"}
+              )
+            ),
+            /* -------------------- 开发者工具插件的配置对象 -------------------- */
+            {
+              enabled: true,
+              name: "cat store", // 设置开发者工具中的名称
+            }
+          )
+        )
+      )
+    );
+    ```
+
+2. 对比：使用getState和setState方法分离action，简化store
+
+    ```ts
+    import { create } from "zustand";
+    import { immer } from "zustand/middleware/immer";
+    import { createSelectors } from "../utils/createSelectors";
+    import { devtools, persist, subscribeWithSelector } from "zustand/middleware";
+    
+    const initState = {
+      cats: {
+        bigCats: 0,
+        smallCats: 0,
+      },
+    };
+    
+    export const catStore = createSelectors(
+      create<typeof initState>()(
+        // 直接更改状态
+        immer(
+          // 开发者工具
+          devtools(
+            // 订阅部分所选状态
+            subscribeWithSelector(
+              // 存取本地数据
+              persist(
+                () => initState,
+                /* ----------------- 本地存储插件persist的配置对象 ----------------- */
+                {
+                  name: "cat store",
+                }
+              )
+            ),
+            /* -------------------- 开发者工具插件的配置对象 -------------------- */
+            {
+              name: "cat store", // 设置开发者工具中的名称
+            }
+          )
+        )
+      )
+    );
+    
+    export const increaseBigCats = () =>
+      catStore.setState((state) => {
+        state.cats.bigCats++;
+      });
+    export const increaseSmallCats = () =>
+      catStore.setState((state) => {
+        state.cats.smallCats++;
+      });
+    export const summary = () => {
+      const totalCats =
+        catStore.getState().cats.smallCats + catStore.getState().cats.bigCats;
+      alert("total cats is " + totalCats);
+    };
+    ```
+
+3. 更推荐使用后一种简化方式
+
+#### 10. 大总结
