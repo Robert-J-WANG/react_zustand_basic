@@ -1,8 +1,8 @@
 import {
   catStore,
-  increaseBigCats,
-  increaseSmallCats,
-  summary,
+  // increaseBigCats,
+  // increaseSmallCats,
+  // summary,
 } from "../stores/catStore";
 
 export const CatBox = () => {
@@ -19,6 +19,9 @@ export const CatBox = () => {
   /* -------------------- 2.批量返回所以状态元素 -------------------- */
   const {
     cats: { bigCats, smallCats },
+    increaseBigCats,
+    increaseSmallCats,
+    summary,
   } = catStore();
   return (
     <div className="box">
